@@ -1,0 +1,11 @@
+# Alternativa para build no Linux quando a rede padrão do Docker não alcança o NuGet.
+services:
+  estoque:
+    build:
+      network: host
+  vendas:
+    build:
+      network: host
+  gateway:
+    build:
+      network: host

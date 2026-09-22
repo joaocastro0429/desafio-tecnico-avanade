@@ -1,0 +1,80 @@
+name: desafio-avanade
+
+x-security: &security
+  Jwt__Key: ${JWT_KEY:?Execute python3 scripts/setup.py}
+  Internal__Key: ${INTERNAL_KEY:?Execute python3 scripts/setup.py}
+
+x-rabbit: &rabbit
+  Rabbit__Host: rabbitmq
+  Rabbit__User: ${RABBIT_USER:?Execute python3 scripts/setup.py}
+  Rabbit__Password: ${RABBIT_PASSWORD:?Execute python3 scripts/setup.py}
+
+services:
+  rabbitmq:
+    image: rabbitmq:4.2-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD}
+    ports:
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbit-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  estoque:
+    build:
+      context: .
+      args:
+        PROJECT: Estoque.Api
+    environment:
+      <<: [*security, *rabbit]
+      Data__Directory: /data
+    volumes:
+      - estoque-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  vendas:
+    build:
+      context: .
+      args:
+        PROJECT: Vendas.Api
+    environment:
+      <<: [*security, *rabbit]
+      Data__Directory: /data
+      Services__Stock: http://estoque:8080
+    volumes:
+      - vendas-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      estoque:
+        condition: service_started
+
+  gateway:
+    build:
+      context: .
+      args:
+        PROJECT: Gateway
+    environment:
+      <<: *security
+      Services__Stock: http://estoque:8080
+      Services__Sales: http://vendas:8080
+      Demo__AdminHash: ${DEMO_ADMIN_HASH}
+      Demo__ClientHash: ${DEMO_CLIENT_HASH}
+      Demo__Client2Hash: ${DEMO_CLIENT2_HASH}
+    ports:
+      - "127.0.0.1:5000:8080"
+    depends_on:
+      - estoque
+      - vendas
+
+volumes:
+  rabbit-data:
+  estoque-data:
+  vendas-data:

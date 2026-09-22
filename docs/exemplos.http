@@ -1,0 +1,65 @@
+@baseUrl = http://localhost:5000
+@adminPassword = COLE_A_SENHA_DEMO_ADMIN_PASSWORD_DO_ENV
+@clientPassword = COLE_A_SENHA_DEMO_CLIENT_PASSWORD_DO_ENV
+@adminToken = COLE_O_ACCESS_TOKEN_DO_ADMIN
+@clientToken = COLE_O_ACCESS_TOKEN_DO_CLIENTE
+@produtoId = COLE_O_ID_DO_PRODUTO
+@pedidoId = COLE_O_ID_DO_PEDIDO
+
+### Saúde
+GET {{baseUrl}}/health
+
+### Login do administrador
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{"username":"admin","password":"{{adminPassword}}"}
+
+### Cadastro de produto (copie o ID da resposta)
+POST {{baseUrl}}/produtos
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"nome":"Teclado","descricao":"Teclado USB","preco":100.00,"quantidade":10}
+
+### Login do cliente
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{"username":"cliente","password":"{{clientPassword}}"}
+
+### Consulta do catálogo
+GET {{baseUrl}}/produtos
+Authorization: Bearer {{clientToken}}
+
+### Pedido de duas unidades (copie o ID da resposta)
+POST {{baseUrl}}/pedidos
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{"itens":[{"produtoId":"{{produtoId}}","quantidade":2}]}
+
+### Consulta do pedido
+GET {{baseUrl}}/pedidos/{{pedidoId}}
+Authorization: Bearer {{clientToken}}
+
+### Estoque após processamento: oito unidades
+GET {{baseUrl}}/produtos/{{produtoId}}
+Authorization: Bearer {{clientToken}}
+
+### Estoque insuficiente: pedido rejeitado
+POST {{baseUrl}}/pedidos
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{"itens":[{"produtoId":"{{produtoId}}","quantidade":99}]}
+
+### Ajuste administrativo: define a quantidade física; respeita as reservas
+PATCH {{baseUrl}}/produtos/{{produtoId}}/estoque
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"quantidade":20}
+
+### Sem autenticação: 401
+GET {{baseUrl}}/produtos
